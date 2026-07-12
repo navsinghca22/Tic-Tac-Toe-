@@ -1,0 +1,242 @@
+:root {
+  --board: #2b3d34;
+  --board-dark: #223129;
+  --frame: #6b4a35;
+  --frame-dark: #4a3324;
+  --chalk-white: #eef1ea;
+  --chalk-yellow: #e8d478;
+  --chalk-pink: #e79bb0;
+  --chalk-dim: rgba(238, 241, 234, 0.35);
+  --mono: 'JetBrains Mono', monospace;
+  --hand: 'Caveat', cursive;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: radial-gradient(ellipse at 50% -10%, #3a4d42 0%, #1c2921 60%, #141d18 100%);
+  color: var(--chalk-white);
+  font-family: var(--mono);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.board-room {
+  width: 100%;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.header {
+  text-align: center;
+}
+
+.title {
+  font-family: var(--hand);
+  font-weight: 700;
+  font-size: clamp(2.6rem, 8vw, 3.6rem);
+  margin: 0;
+  color: var(--chalk-white);
+  filter: url(#chalk);
+  letter-spacing: 1px;
+}
+
+.subtitle {
+  font-family: var(--hand);
+  font-size: 1.25rem;
+  color: var(--chalk-dim);
+  margin: 2px 0 0;
+}
+
+.status {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-yellow);
+  min-height: 1.2em;
+  margin: 0;
+}
+
+.table {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 3vw, 28px);
+  width: 100%;
+}
+
+.tally {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 56px;
+}
+
+.tally-label {
+  font-family: var(--hand);
+  font-size: 1.6rem;
+  color: var(--chalk-dim);
+}
+
+.tally-marks {
+  width: 60px;
+  height: 40px;
+}
+
+.tally-marks line {
+  stroke: var(--chalk-white);
+  stroke-width: 3;
+  stroke-linecap: round;
+  filter: url(#chalk);
+}
+
+.board-wrap {
+  position: relative;
+  width: min(72vw, 300px);
+  height: min(72vw, 300px);
+  background: var(--board);
+  background-image:
+    radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 6px 6px;
+  border: 10px solid var(--frame);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 3px var(--frame-dark),
+    inset 0 0 30px rgba(0,0,0,0.45),
+    0 18px 30px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+}
+
+.grid-lines, .strike-line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.grid-lines line {
+  stroke: var(--chalk-dim);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.strike-line line {
+  stroke: var(--chalk-pink);
+  stroke-width: 5;
+  stroke-linecap: round;
+  filter: url(#chalkThick);
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+  transition: stroke-dashoffset 0.45s ease;
+}
+
+.strike-line.drawn line {
+  stroke-dashoffset: 0;
+}
+
+.board {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.cell {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.cell:focus-visible {
+  outline: 2px dashed var(--chalk-yellow);
+  outline-offset: -6px;
+}
+
+.cell svg {
+  width: 58%;
+  height: 58%;
+  overflow: visible;
+}
+
+.mark-x line {
+  stroke: var(--chalk-yellow);
+  stroke-width: 8;
+  stroke-linecap: round;
+  filter: url(#chalkThick);
+}
+
+.mark-o circle {
+  fill: none;
+  stroke: var(--chalk-pink);
+  stroke-width: 8;
+  stroke-linecap: round;
+  filter: url(#chalkThick);
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.btn {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--board-dark);
+  background: var(--chalk-white);
+  border: none;
+  border-radius: 3px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn:hover { transform: translateY(-1px); background: #fff; }
+.btn:active { transform: translateY(0); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--chalk-dim);
+  border: 1px solid var(--chalk-dim);
+}
+
+.btn-ghost:hover {
+  background: rgba(238,241,234,0.08);
+  color: var(--chalk-white);
+}
+
+.draws-note {
+  font-size: 0.7rem;
+  color: var(--chalk-dim);
+  margin: 0;
+  min-height: 1em;
+}
+
+@media (max-width: 480px) {
+  .table { gap: 10px; }
+  .tally-label { font-size: 1.2rem; }
+  .tally-marks { width: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strike-line line { transition: none; }
+}

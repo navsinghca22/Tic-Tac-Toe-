@@ -1,0 +1,56 @@
+name: Deploy Tic-Tac-Toe to S3
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write   # required to request the OIDC JWT
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  STACK_NAME: tic-tac-toe-site
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+            --template-file infrastructure/s3-website.yaml \
+            --stack-name "$STACK_NAME" \
+            --no-fail-on-empty-changeset
+
+      - name: Get bucket name from stack output
+        id: stack-output
+        run: |
+          BUCKET=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='BucketName'].OutputValue" \
+            --output text)
+          echo "bucket=$BUCKET" >> "$GITHUB_OUTPUT"
+
+      - name: Sync game files to S3
+        run: |
+          aws s3 sync ./public "s3://${{ steps.stack-output.outputs.bucket }}" \
+            --delete \
+            --cache-control "no-cache"
+
+      - name: Print website URL
+        run: |
+          aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='WebsiteURL'].OutputValue" \
+            --output text

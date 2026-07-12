@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  One-time bootstrap: creates the GitHub OIDC identity provider (if not
+  already present in this account) and an IAM role that GitHub Actions
+  assumes to deploy the tic-tac-toe stack. Deploy this ONE TIME using your
+  own AWS credentials (console or CLI) -- it is not deployed by the
+  GitHub Actions workflow itself, since the workflow needs this role to
+  already exist before it can authenticate.
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Description: GitHub username or organization that owns the repo
+    Default: navsinghca22
+
+  GitHubRepo:
+    Type: String
+    Description: Repository name (exactly as it appears in the GitHub URL)
+    Default: Tic-Tac-Toe-
+
+  GitHubBranch:
+    Type: String
+    Description: Branch allowed to assume the deploy role
+    Default: main
+
+  CreateOIDCProvider:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'true'
+    Description: >
+      Set to false if your AWS account already has a GitHub Actions OIDC
+      provider registered (an account can only have one for
+      token.actions.githubusercontent.com).
+
+Conditions:
+  ShouldCreateProvider: !Equals [!Ref CreateOIDCProvider, 'true']
+
+Resources:
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: ShouldCreateProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea
+        - 1c58a3a8518e8759bf075b76b750d4f2df264fcd
+
+  GitHubDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: github-actions-tic-tac-toe-deploy
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub arn:aws:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${GitHubRepo}:ref:refs/heads/${GitHubBranch}
+      Policies:
+        - PolicyName: deploy-tic-tac-toe-site
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: CloudFormationDeploy
+                Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:GetTemplate
+                  - cloudformation:ValidateTemplate
+                  - cloudformation:DeleteStack
+                Resource:
+                  - !Sub arn:aws:cloudformation:*:${AWS::AccountId}:stack/tic-tac-toe-*/*
+              - Sid: S3BucketManagement
+                Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:PutBucketWebsite
+                  - s3:PutBucketPolicy
+                  - s3:PutBucketPublicAccessBlock
+                  - s3:PutBucketOwnershipControls
+                  - s3:GetBucketLocation
+                  - s3:GetBucketPolicy
+                Resource:
+                  - !Sub arn:aws:s3:::tic-tac-toe-${AWS::AccountId}
+              - Sid: S3ObjectSync
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub arn:aws:s3:::tic-tac-toe-${AWS::AccountId}
+                  - !Sub arn:aws:s3:::tic-tac-toe-${AWS::AccountId}/*
+
+Outputs:
+  DeployRoleArn:
+    Description: Put this in your GitHub repo as an Actions variable/secret (AWS_DEPLOY_ROLE_ARN)
+    Value: !GetAtt GitHubDeployRole.Arn

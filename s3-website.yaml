@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  S3 bucket configured for static website hosting -- serves the tic-tac-toe
+  game. Uses only S3 standard storage (AWS Free Tier: 5GB storage,
+  20,000 GET / 2,000 PUT requests per month for your first 12 months).
+  Deployed automatically by the GitHub Actions workflow.
+
+Resources:
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub tic-tac-toe-${AWS::AccountId}
+      AccessControl: Private
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      Tags:
+        - Key: project
+          Value: tic-tac-toe
+
+  WebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebsiteBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub arn:aws:s3:::${WebsiteBucket}/*
+
+Outputs:
+  WebsiteURL:
+    Description: URL of the deployed tic-tac-toe game
+    Value: !GetAtt WebsiteBucket.WebsiteURL
+
+  BucketName:
+    Description: Name of the S3 bucket (used by the GitHub Actions sync step)
+    Value: !Ref WebsiteBucket
