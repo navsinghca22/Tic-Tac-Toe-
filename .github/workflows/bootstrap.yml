@@ -1,0 +1,44 @@
+name: Bootstrap OIDC Role (run once, manually)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (temporary access keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy bootstrap stack
+        run: |
+          aws cloudformation deploy \
+            --template-file infrastructure/bootstrap-oidc-role.yaml \
+            --stack-name tic-tac-toe-bootstrap \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --parameter-overrides \
+              GitHubOrg=navsinghca22 \
+              GitHubRepo=Tic-Tac-Toe- \
+              GitHubBranch=main \
+              CreateOIDCProvider=true
+
+      - name: Print the deploy role ARN
+        run: |
+          echo "Copy this ARN into a repo variable named AWS_DEPLOY_ROLE_ARN:"
+          aws cloudformation describe-stacks \
+            --stack-name tic-tac-toe-bootstrap \
+            --query "Stacks[0].Outputs[0].OutputValue" \
+            --output text
